@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1220">
 <meta name="description" content="Polymathic technical growth sprint with deliberate practice, metacognition, spaced review, outcomes and weekly adaptive planning.">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Growth OS">
 <title>23-Day Growth OS</title>
 <style>
 :root{--bg:#f4f7fb;--panel:#ffffff;--panel2:#f7f9fc;--text:#111827;--muted:#667085;--line:#e5e7eb;--accent:#5b5bd6;--accent2:#8b5cf6;--good:#159f6b;--warn:#c47b00;--bad:#c24141;--shadow:0 10px 28px rgba(15,23,42,.07);--radius:16px}
@@ -31,7 +36,7 @@
   </aside>
   <div class="content">
     <div class="mobile-nav" id="navMobile"></div>
-    <header class="topbar"><div><div class="top-title" id="viewTitle">Dashboard</div><div class="sub" id="viewSubtitle">Your 23-day technical growth system</div></div><div class="top-meta"><span class="pill"><span class="dot-live"></span><span id="saveStatus">Saved locally</span></span><button class="btn small" onclick="openView('settings')">⚙ Settings</button></div></header>
+    <header class="topbar"><div><div class="top-title" id="viewTitle">Dashboard</div><div class="sub" id="viewSubtitle">Your 23-day technical growth system</div></div><div class="top-meta"><span class="pill"><span class="dot-live"></span><span id="saveStatus">Saved locally</span></span><button class="btn small primary" id="installAppBtn" type="button" onclick="installGrowthApp()">⇩ Install app</button><button class="btn small" onclick="openView('settings')">⚙ Settings</button></div></header>
     <main class="main">
       <section class="view active" id="view-dashboard">
         <div class="panel hero">
@@ -336,6 +341,17 @@ coachResponse=function(msg){const m=String(msg||'').toLowerCase();if(m.includes(
 
 // Init
 buildNav();openView('dashboard');
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+// PWA install support. Installability requires a secure HTTPS origin (except localhost),
+// a valid manifest with 192/512px icons, and a working service worker.
+let growthDeferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();growthDeferredInstallPrompt=e;const b=document.getElementById('installAppBtn');if(b){b.textContent='⇩ Install app';b.classList.add('primary');}});
+window.addEventListener('appinstalled',()=>{growthDeferredInstallPrompt=null;const b=document.getElementById('installAppBtn');if(b){b.textContent='✓ Installed';b.disabled=true;}toast('Growth OS installed successfully.');});
+async function installGrowthApp(){
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){toast('Growth OS is already running as an installed app.');return;}
+  if(growthDeferredInstallPrompt){growthDeferredInstallPrompt.prompt();const choice=await growthDeferredInstallPrompt.userChoice;growthDeferredInstallPrompt=null;if(choice&&choice.outcome==='accepted'){toast('Installing Growth OS…');}else{toast('Installation dismissed. You can try again from Chrome’s menu.');}return;}
+  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'){toast('Install requires an HTTPS-hosted URL. A local file cannot be installed as a PWA.');return;}
+  toast('If Chrome offers only “Create shortcut”, redeploy the full updated ZIP (including manifest.webmanifest, sw.js and the icons folder), reload the HTTPS page, then check Chrome ⋮ → Install app.');
+}
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').then(reg=>reg.update()).catch(err=>console.warn('Service worker registration failed:',err)));}
 </script>
 </body></html>
